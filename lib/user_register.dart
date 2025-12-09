@@ -64,7 +64,7 @@ class _UserRegisterState extends State<UserRegister> with SingleTickerProviderSt
           'password': hashedPassword,  // Storing the hashed password
         });
 
-        /////change3
+        /////change4
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('✅ Registered Successfully!'),
