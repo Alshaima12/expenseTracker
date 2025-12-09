@@ -63,7 +63,8 @@ class _UserRegisterState extends State<UserRegister> with SingleTickerProviderSt
           'dob': selectedDate != null ? selectedDate!.toIso8601String() : "",
           'password': hashedPassword,  // Storing the hashed password
         });
- ///change
+
+        /////change2
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('✅ Registered Successfully!'),
