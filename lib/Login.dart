@@ -120,6 +120,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       } else if (e.code == 'too-many-requests') {
         errorMessage = '❌ Too many login attempts. Please try again later.';
       }
+      //ccgit
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
