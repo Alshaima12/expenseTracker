@@ -59,11 +59,12 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     if (value == null || value.isEmpty) {
       return 'Please enter your email address';
     }
-    if (!RegExp(r'\b[0-9]{2,3}[J|j|S|s][0-9]+@utas.edu.om\b').hasMatch(value)) {
+    if (!RegExp(r'(?i)\b[0-9]{2,3}[J|j|S|s][0-9]+@utas.edu.om\b').hasMatch(value)) {
       return 'Please enter a valid email address in the format "xxJxxxx@utas.edu.om"';
     }
     return null;
   }
+
 
   String? passwordValidator(String? value) {
     if (value == null || value.isEmpty) {
@@ -120,7 +121,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       } else if (e.code == 'too-many-requests') {
         errorMessage = '❌ Too many login attempts. Please try again later.';
       }
-      //ccgit
+
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
