@@ -33,7 +33,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       return 'Please enter your email address';
     }
     // Regex pattern for a valid email format like "xxJxxxx@utas.edu.om" or "xxjxxxx@utas.edu.om"
-    if (!RegExp(r'\b[0-9]{2,3}[J|j|S|s][0-9]+@utas.edu.om\b').hasMatch(value)) {
+    if (!RegExp(r'\b[0-9]{2,3}[JjSs][0-9]+@utas\.edu\.om\b', caseSensitive: false).hasMatch(value)) {
       return 'Please enter a valid email address in the format "xxJ/Sxxxx@utas.edu.om"';
     }
     return null;
@@ -59,7 +59,6 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     try {
       // Use FirebaseAuth to verify that the email exists.
       await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
-
       final otp = _generateOtp();
 
       // 💬 Show OTP as a local notification instead of dialog
@@ -153,7 +152,6 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
               ),
             ),
             const SizedBox(height: 30),
-
             // Email Input Field
             TextField(
               controller: emailController,
@@ -172,7 +170,6 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
               ),
             ),
             const SizedBox(height: 30),
-
             // Send OTP Button
             SizedBox(
               width: double.infinity,

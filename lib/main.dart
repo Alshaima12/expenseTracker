@@ -3,8 +3,10 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_firebase_app_2/Login.dart';
 import 'package:flutter_firebase_app_2/Welcome.dart';
+import 'ResetPassword2.dart';
 import 'notifications_helper.dart';
 import 'user_register.dart';
+
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,6 +34,7 @@ class MyApp extends StatelessWidget {
         '/login': (context) => const LoginPage(),
         '/register': (context) =>  UserRegister(),
         '/welcome': (context) =>  WelcomePage(),
+        '/reset-password': (context) => const ResetPasswordPage(),
       },
     );
   }

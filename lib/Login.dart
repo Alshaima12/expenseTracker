@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter_firebase_app_2/Home.dart';
-import 'package:flutter_firebase_app_2/forgotPassword.dart';
-import 'package:flutter_firebase_app_2/user_register.dart';
+import 'Home.dart';
+import 'forgotPassword.dart';
+import 'user_register.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
   @override
-  _LoginPageState createState() => _LoginPageState();
+  State<LoginPage> createState() => _LoginPageState();
 }
 
 class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMixin {
@@ -22,6 +22,115 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
+  // Email validator (UTAS email with case insensitivity)
+  String? emailValidator(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Please enter your email address';
+    }
+
+    final v = value.trim();
+    final reg = RegExp(
+      r'^[0-9]{2,3}[JS][0-9]+@utas\.edu\.om$',
+      caseSensitive: false,
+    );
+
+    if (!reg.hasMatch(v)) {
+      return 'Please enter a valid UTAS email such as "22J1234@utas.edu.om"';
+    }
+    return null;
+  }
+
+  String? passwordValidator(String? value) {
+    if (value == null || value.isEmpty) return 'Please enter your password';
+    if (value.length < 6) return 'Password must be at least 6 characters';
+    return null;
+  }
+
+  String _friendlyLoginError(FirebaseAuthException e) {
+    switch (e.code) {
+      case 'user-not-found':
+        return '❌ Email not found (not registered).';
+      case 'wrong-password':
+        return '❌ Incorrect password.';
+      case 'invalid-email':
+        return '❌ Invalid email format.';
+      case 'too-many-requests':
+        return '❌ Too many attempts. Try again later.';
+      case 'network-request-failed':
+        return '❌ Network error. Check internet connection.';
+      case 'user-disabled':
+        return '❌ This account is disabled.';
+      case 'invalid-credential':
+        return '❌ Invalid email or password.';
+      default:
+        return '❌ ${e.code}: ${e.message ?? "Authentication failed."}';
+    }
+  }
+
+  Future<void> _login() async {
+    final emailRaw = emailController.text.trim();
+    final passRaw = passwordController.text;
+
+    // Local validation
+    final emailErr = emailValidator(emailRaw);
+    if (emailErr != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(emailErr), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    final passErr = passwordValidator(passRaw);
+    if (passErr != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(passErr), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: emailRaw.toLowerCase(),
+        password: passRaw.trim(),
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ Login Successful!'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+
+      await Future.delayed(const Duration(seconds: 2));
+      if (!mounted) return;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const HomePage()),
+      );
+    } on FirebaseAuthException catch (e) {
+      final msg = _friendlyLoginError(e);
+
+      // Debug prints
+      print('FirebaseAuthException => code=${e.code}, message=${e.message}');
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg), backgroundColor: Colors.red),
+      );
+    } catch (e) {
+      print('Login error => $e');
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('❌ Error: $e'), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -30,17 +139,16 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       vsync: this,
       duration: const Duration(milliseconds: 800),
     );
+
     _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeIn,
-      ),
+      CurvedAnimation(parent: _animationController, curve: Curves.easeIn),
     );
-    _slideAnimation = Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeOut,
-      ),
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.2),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
     );
 
     _animationController.forward();
@@ -54,98 +162,12 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
     super.dispose();
   }
 
-  // Email and Password Validators
-  String? emailValidator(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Please enter your email address';
-    }
-    if (!RegExp(r'\b[0-9]{2,3}[J|j|S|s][0-9]+@utas.edu.om\b').hasMatch(value)) {
-      return 'Please enter a valid email address in the format "xxJxxxx@utas.edu.om"';
-    }
-    return null;
-  }
-
-  String? passwordValidator(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Please enter your password';
-    }
-    if (value.length < 6) {
-      return 'Password must be at least 6 characters';
-    }
-    return null;
-  }
-
-  void _login() async {
-    if (emailController.text.isEmpty || passwordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('⚠️ Please fill in all fields'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: emailController.text.trim(),
-        password: passwordController.text.trim(),
-      );
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('✅ Login Successful!'),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
-        ),
-      );
-
-      await Future.delayed(const Duration(seconds: 2));
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const HomePage()),
-      );
-    } on FirebaseAuthException catch (e) {
-      // Handle specific FirebaseAuthException error codes
-      String errorMessage = 'Something went wrong. Please try again later.';
-
-      if (e.code == 'user-not-found') {
-        errorMessage = '❌ Email not found. Please check the email address and try again.';
-      } else if (e.code == 'wrong-password') {
-        errorMessage = '❌ Incorrect password. Please try again.';
-      } else if (e.code == 'invalid-email') {
-        errorMessage = '❌ Invalid email format. Please enter a valid email.';
-      } else if (e.code == 'too-many-requests') {
-        errorMessage = '❌ Too many login attempts. Please try again later.';
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(errorMessage),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } catch (e) {
-      // Catch any other types of exceptions
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('❌ Error: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } finally {
-      setState(() => _isLoading = false);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    const Color backgroundLight = Color(0xFFE8EAFF); // Light background
-    const Color primaryBlue = Color(0xFF293282); // Deep blue
-    const Color mediumBlue = Color(0xFF5B70A1); // Medium blue
-    const Color accentBlue = Color(0xFF3C5BAA); // Accent
+    const Color backgroundLight = Color(0xFFE8EAFF);
+    const Color primaryBlue = Color(0xFF293282);
+    const Color mediumBlue = Color(0xFF5B70A1);
+    const Color accentBlue = Color(0xFF3C5BAA);
 
     return Scaffold(
       body: Container(
@@ -168,11 +190,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
-                      Icons.lock_outline,
-                      color: accentBlue,
-                      size: 100,
-                    ),
+                    Icon(Icons.lock_outline, color: accentBlue, size: 100),
                     const SizedBox(height: 20),
                     Text(
                       "Welcome Back!",
@@ -185,10 +203,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                     const SizedBox(height: 10),
                     Text(
                       "Login to your account",
-                      style: TextStyle(
-                        color: mediumBlue,
-                        fontSize: 16,
-                      ),
+                      style: TextStyle(color: mediumBlue, fontSize: 16),
                     ),
                     const SizedBox(height: 30),
 
@@ -208,16 +223,13 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                       ),
                       child: Column(
                         children: [
-                          // Email Field
+                          // Email
                           TextFormField(
                             controller: emailController,
                             keyboardType: TextInputType.emailAddress,
                             decoration: InputDecoration(
                               hintText: "Email Address",
-                              prefixIcon: Icon(
-                                Icons.email,
-                                color: accentBlue,
-                              ),
+                              prefixIcon: Icon(Icons.email, color: accentBlue),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(15),
                                 borderSide: BorderSide.none,
@@ -226,30 +238,22 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                               fillColor: backgroundLight,
                               contentPadding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
                             ),
-                            validator: emailValidator,
                           ),
                           const SizedBox(height: 15),
 
-                          // Password Field
+                          // Password
                           TextFormField(
                             controller: passwordController,
                             obscureText: _obscurePassword,
                             decoration: InputDecoration(
                               hintText: "Password",
-                              prefixIcon: Icon(
-                                Icons.lock,
-                                color: accentBlue,
-                              ),
+                              prefixIcon: Icon(Icons.lock, color: accentBlue),
                               suffixIcon: IconButton(
                                 icon: Icon(
                                   _obscurePassword ? Icons.visibility_off : Icons.visibility,
                                   color: accentBlue,
                                 ),
-                                onPressed: () {
-                                  setState(() {
-                                    _obscurePassword = !_obscurePassword;
-                                  });
-                                },
+                                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                               ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(15),
@@ -259,7 +263,6 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                               fillColor: backgroundLight,
                               contentPadding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
                             ),
-                            validator: passwordValidator,
                           ),
                           const SizedBox(height: 10),
 
@@ -270,23 +273,18 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                               onPressed: () {
                                 Navigator.push(
                                   context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const ForgotPasswordPage(),
-                                  ),
+                                  MaterialPageRoute(builder: (_) => const ForgotPasswordPage()),
                                 );
                               },
                               child: Text(
                                 "Forgot Password?",
-                                style: TextStyle(
-                                  color: accentBlue,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                style: TextStyle(color: accentBlue, fontWeight: FontWeight.bold),
                               ),
                             ),
                           ),
                           const SizedBox(height: 10),
 
-                          // Gradient Login Button
+                          // Login Button
                           SizedBox(
                             width: double.infinity,
                             height: 55,
@@ -331,9 +329,10 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                         ],
                       ),
                     ),
+
                     const SizedBox(height: 20),
 
-                    // Register Text
+                    // Sign Up
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -342,17 +341,12 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                           onTap: () {
                             Navigator.push(
                               context,
-                              MaterialPageRoute(
-                                builder: (context) => const UserRegister(),
-                              ),
+                              MaterialPageRoute(builder: (_) => const UserRegister()),
                             );
                           },
                           child: Text(
                             "Sign Up",
-                            style: TextStyle(
-                              color: accentBlue,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: TextStyle(color: accentBlue, fontWeight: FontWeight.bold),
                           ),
                         ),
                       ],
